@@ -5,5 +5,5 @@ set -e
 COMPOSE_FILE="compose.yaml"
 VOLUME="supabase_data"
 
-$DOCKER compose -f $COMPOSE_FILE down -v
-$DOCKER volume rm "$VOLUME"
+docker compose -f $COMPOSE_FILE down -v
+docker volume rm "$VOLUME"
