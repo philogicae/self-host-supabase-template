@@ -6,6 +6,10 @@ COMPOSE_FILE="compose.yaml"
 VOLUME="supabase_data"
 INIT_VOLUMES="init_volumes"
 
+# Add missing folders
+mkdir -p "$INIT_VOLUMES/db/data"
+mkdir -p "$INIT_VOLUMES/storage"
+
 # Create data volume if it doesn't exist
 echo "Checking if volume '$VOLUME' exists..."
 if ! docker volume inspect "$VOLUME" &> /dev/null; then
