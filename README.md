@@ -12,12 +12,14 @@ This repository provides a convenient template for self-hosting a complete Supab
 To get your self-hosted Supabase instance up and running, follow these steps:
 
 1.  **Clone the repository:**
+
 ```bash
 git clone https://github.com/philogicae/self-host-supabase-template.git
 cd self-host-supabase-template
 ```
 
 2.  **Deploy the Supabase stack:**
+
 Copy the `.env.example` file to `.env` and fill it with your own values.
 Then run the `deploy.sh` script:
 ```bash
@@ -29,6 +31,7 @@ Then run the `deploy.sh` script:
     - Start all the Supabase services in the background using Docker Compose.
 
 3.  **Access Supabase Studio:**
+
 Once the services are running, you can access the Supabase Studio by opening your web browser and navigating to `http://localhost:3000`.
 
 ## Project Structure
