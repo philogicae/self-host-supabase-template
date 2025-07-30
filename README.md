@@ -40,3 +40,4 @@ Once the services are running, you can access the Supabase Studio by opening you
 - `init_volumes`: Contains initialization scripts and configuration files for the various services.
 - `deploy.sh`: A script to deploy the Supabase stack.
 - `reset.sh`: A script to reset the Supabase environment.
+- `create_data_volume.sh`: A script to create the data volume and copy the initialization files into it.
