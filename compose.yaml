@@ -211,6 +211,7 @@ services:
   minio:
     container_name: supabase-minio
     image: minio/minio
+    restart: unless-stopped
     <<: [ *default-networks ]
     #ports:
     #  - 9000:9000
@@ -292,6 +293,7 @@ services:
   imgproxy:
     container_name: supabase-imgproxy
     image: darthsim/imgproxy:v3.8.0
+    restart: unless-stopped
     <<: [ *default-networks ]
     healthcheck:
       test: [ "CMD", "imgproxy", "health" ]
