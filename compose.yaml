@@ -244,7 +244,7 @@ services:
 
   storage:
     container_name: supabase-storage
-    image: supabase/storage-api:v1.25.9
+    image: supabase/storage-api:v1.25.7
     restart: unless-stopped
     <<: [ *default-networks ]
     volumes:
