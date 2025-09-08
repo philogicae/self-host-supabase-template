@@ -213,7 +213,7 @@ services:
     image: minio/minio
     restart: unless-stopped
     <<: [ *default-networks ]
-    #ports:
+    # ports:
     #  - 9000:9000
     #  - 9001:9001
     environment:
@@ -353,8 +353,8 @@ services:
     image: supabase/logflare:1.14.2
     restart: unless-stopped
     <<: [ *default-networks ]
-    ports:
-      - 4000:4000
+    # ports:
+    #  - 4000:4000
     # Uncomment to use Big Query backend for analytics
     # volumes:
     #   - type: bind
