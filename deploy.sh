@@ -1,9 +1,6 @@
 #!/bin/bash
 set -e
 
-# Add missing folders
-mkdir -p "volumes/db/data"
-mkdir -p "volumes/storage"
-
+./prepare_volumes.sh
 echo "Starting Docker Compose services..."
 docker compose up -d
