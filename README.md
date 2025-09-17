@@ -26,8 +26,7 @@ Then run the `deploy.sh` script:
 ./deploy.sh
 ```
 - This script will:
-    - Create a Docker volume named `supabase_data` to persist your data.
-    - Copy the necessary initialization files from the `init_volumes` directory into the volume.
+    - Create the necessary directories for the database and storage volumes.
     - Start all the Supabase services in the background using Docker Compose.
 
 3.  **Access Supabase Studio:**
@@ -37,7 +36,7 @@ Once the services are running, you can access the Supabase Studio by opening you
 ## Project Structure
 - `.env.example`: An example environment file that you should copy to `.env` and fill with your own values.
 - `compose.yaml`: The main Docker Compose file that defines all the Supabase services.
-- `init_volumes`: Contains initialization scripts and configuration files for the various services.
+- `volumes`: Contains initialization scripts and configuration files for the various services.
 - `deploy.sh`: A script to deploy the Supabase stack.
-- `reset.sh`: A script to reset the Supabase environment.
-- `create_data_volume.sh`: A script to create the data volume and copy the initialization files into it.
+- `reset.sh`: A script to reset the Supabase environment by stopping containers, removing volumes, and resetting the git repository.
+- `prepare_volumes.sh`: A script to create the necessary volume directories. Note that `deploy.sh` already performs this step.
