@@ -7,13 +7,13 @@ sources:
     type: docker_logs
     ## only works on this containers
     include_containers:
-     - supabase-kong
-     - supabase-auth
-     - supabase-rest
-     - realtime-dev.supabase-realtime
-     - supabase-storage
-     - supabase-edge-functions
-     - supabase-db
+      - supabase-kong
+      - supabase-auth
+      - supabase-rest
+      - realtime-dev.supabase-realtime
+      - supabase-storage
+      - supabase-edge-functions
+      - supabase-db
     #exclude_containers:
     #  - supabase-vector
 
@@ -126,6 +126,13 @@ transforms:
           .event_message = parsed.msg
           .metadata.level = parsed.level
       }
+  # Function logs are unstructured messages on stderr
+  functions_logs:
+    type: remap
+    inputs:
+      - router.functions
+    source: |-
+      .metadata.project_ref = del(.project)
   # Storage logs may contain json objects so we parse them for completeness
   storage_logs:
     type: remap
@@ -166,48 +173,48 @@ transforms:
 
 sinks:
   logflare_auth:
-    type: 'http'
+    type: "http"
     inputs:
       - auth_logs
     encoding:
-      codec: 'json'
-    method: 'post'
+      codec: "json"
+    method: "post"
     request:
       retry_max_duration_secs: 10
       headers:
         x-api-key: ${LOGFLARE_PUBLIC_ACCESS_TOKEN?LOGFLARE_PUBLIC_ACCESS_TOKEN is required}
-    uri: 'http://analytics:4000/api/logs?source_name=gotrue.logs.prod'
+    uri: "http://analytics:4000/api/logs?source_name=gotrue.logs.prod"
   logflare_realtime:
-    type: 'http'
+    type: "http"
     inputs:
       - realtime_logs
     encoding:
-      codec: 'json'
-    method: 'post'
+      codec: "json"
+    method: "post"
     request:
       retry_max_duration_secs: 10
       headers:
         x-api-key: ${LOGFLARE_PUBLIC_ACCESS_TOKEN?LOGFLARE_PUBLIC_ACCESS_TOKEN is required}
-    uri: 'http://analytics:4000/api/logs?source_name=realtime.logs.prod'
+    uri: "http://analytics:4000/api/logs?source_name=realtime.logs.prod"
   logflare_rest:
-    type: 'http'
+    type: "http"
     inputs:
       - rest_logs
     encoding:
-      codec: 'json'
-    method: 'post'
+      codec: "json"
+    method: "post"
     request:
       retry_max_duration_secs: 10
       headers:
         x-api-key: ${LOGFLARE_PUBLIC_ACCESS_TOKEN?LOGFLARE_PUBLIC_ACCESS_TOKEN is required}
-    uri: 'http://analytics:4000/api/logs?source_name=postgREST.logs.prod'
+    uri: "http://analytics:4000/api/logs?source_name=postgREST.logs.prod"
   logflare_db:
-    type: 'http'
+    type: "http"
     inputs:
       - db_logs
     encoding:
-      codec: 'json'
-    method: 'post'
+      codec: "json"
+    method: "post"
     request:
       retry_max_duration_secs: 10
       headers:
@@ -215,41 +222,41 @@ sinks:
     # We must route the sink through kong because ingesting logs before logflare is fully initialised will
     # lead to broken queries from studio. This works by the assumption that containers are started in the
     # following order: vector > db > logflare > kong
-    uri: 'http://kong:8000/analytics/v1/api/logs?source_name=postgres.logs'
+    uri: "http://kong:8000/analytics/v1/api/logs?source_name=postgres.logs"
   logflare_functions:
-    type: 'http'
+    type: "http"
     inputs:
-      - router.functions
+      - functions_logs
     encoding:
-      codec: 'json'
-    method: 'post'
+      codec: "json"
+    method: "post"
     request:
       retry_max_duration_secs: 10
       headers:
         x-api-key: ${LOGFLARE_PUBLIC_ACCESS_TOKEN?LOGFLARE_PUBLIC_ACCESS_TOKEN is required}
-    uri: 'http://analytics:4000/api/logs?source_name=deno-relay-logs'
+    uri: "http://analytics:4000/api/logs?source_name=deno-relay-logs"
   logflare_storage:
-    type: 'http'
+    type: "http"
     inputs:
       - storage_logs
     encoding:
-      codec: 'json'
-    method: 'post'
+      codec: "json"
+    method: "post"
     request:
       retry_max_duration_secs: 10
       headers:
         x-api-key: ${LOGFLARE_PUBLIC_ACCESS_TOKEN?LOGFLARE_PUBLIC_ACCESS_TOKEN is required}
-    uri: 'http://analytics:4000/api/logs?source_name=storage.logs.prod.2'
+    uri: "http://analytics:4000/api/logs?source_name=storage.logs.prod.2"
   logflare_kong:
-    type: 'http'
+    type: "http"
     inputs:
       - kong_logs
       - kong_err
     encoding:
-      codec: 'json'
-    method: 'post'
+      codec: "json"
+    method: "post"
     request:
       retry_max_duration_secs: 10
       headers:
         x-api-key: ${LOGFLARE_PUBLIC_ACCESS_TOKEN?LOGFLARE_PUBLIC_ACCESS_TOKEN is required}
-    uri: 'http://analytics:4000/api/logs?source_name=cloudflare.logs.prod'
+    uri: "http://analytics:4000/api/logs?source_name=cloudflare.logs.prod"

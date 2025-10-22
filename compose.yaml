@@ -15,7 +15,7 @@ networks:
 services:
   studio:
     container_name: supabase-studio
-    image: supabase/studio:2025.10.01-sha-8460121
+    image: supabase/studio:2025.10.20-sha-5005fc6
     restart: unless-stopped
     <<: [ *default-networks ]
     healthcheck:
@@ -27,8 +27,11 @@ services:
       analytics:
         condition: service_healthy
     environment:
+      CURRENT_CLI_VERSION: 2.53.6
       HOSTNAME: "::"
       STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_HOST: ${POSTGRES_HOST:-db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
       DEFAULT_ORGANIZATION_NAME: ${STUDIO_DEFAULT_ORGANIZATION}
@@ -178,7 +181,7 @@ services:
   realtime:
     # This container name looks inconsistent but is correct because realtime constructs tenant id by parsing the subdomain
     container_name: realtime-dev.supabase-realtime
-    image: supabase/realtime:v2.51.11
+    image: supabase/realtime:v2.56.0
     restart: unless-stopped
     <<: [ *default-networks ]
     depends_on:
@@ -242,7 +245,7 @@ services:
 
   storage:
     container_name: supabase-storage
-    image: supabase/storage-api:v1.28.0
+    image: supabase/storage-api:v1.28.1
     restart: unless-stopped
     <<: [ *default-networks ]
     volumes:
@@ -301,7 +304,7 @@ services:
 
   meta:
     container_name: supabase-meta
-    image: supabase/postgres-meta:v0.91.6
+    image: supabase/postgres-meta:v0.93.0
     restart: unless-stopped
     <<: [ *default-networks ]
     depends_on:
@@ -321,7 +324,7 @@ services:
 
   functions:
     container_name: supabase-edge-functions
-    image: supabase/edge-runtime:v1.69.6
+    image: supabase/edge-runtime:v1.69.14
     restart: unless-stopped
     <<: [ *default-networks ]
     volumes:
@@ -341,7 +344,7 @@ services:
 
   analytics:
     container_name: supabase-analytics
-    image: supabase/logflare:1.22.4
+    image: supabase/logflare:1.22.6
     restart: unless-stopped
     <<: [ *default-networks ]
     # ports:
@@ -464,7 +467,7 @@ services:
   # Update the DATABASE_URL if you are using an external Postgres database
   supavisor:
     container_name: supabase-pooler
-    image: supabase/supavisor:2.7.0
+    image: supabase/supavisor:2.7.3
     restart: unless-stopped
     <<: [ *default-networks ]
     ports:
