@@ -15,7 +15,7 @@ networks:
 services:
   studio:
     container_name: supabase-studio
-    image: supabase/studio:2025.10.20-sha-5005fc6
+    image: supabase/studio:2026.02.16-sha-26c615c
     restart: unless-stopped
     <<: [ *default-networks ]
     healthcheck:
@@ -27,11 +27,12 @@ services:
       analytics:
         condition: service_healthy
     environment:
-      CURRENT_CLI_VERSION: 2.53.6
+      # Binds nestjs listener to both IPv4 and IPv6 network interfaces
       HOSTNAME: "::"
       STUDIO_PG_META_URL: http://meta:8080
-      POSTGRES_HOST: ${POSTGRES_HOST:-db}
-      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
       DEFAULT_ORGANIZATION_NAME: ${STUDIO_DEFAULT_ORGANIZATION}
@@ -44,6 +45,9 @@ services:
       SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
       AUTH_JWT_SECRET: ${JWT_SECRET}
 
+      # LOGFLARE_API_KEY is deprecated
+      LOGFLARE_API_KEY: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
+      LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
       LOGFLARE_PRIVATE_ACCESS_TOKEN: ${LOGFLARE_PRIVATE_ACCESS_TOKEN}
       LOGFLARE_URL: http://analytics:4000
       NEXT_PUBLIC_ENABLE_LOGS: true
@@ -51,6 +55,11 @@ services:
       NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
       # Uncomment to use Big Query backend for analytics
       # NEXT_ANALYTICS_BACKEND_PROVIDER: bigquery
+      SNIPPETS_MANAGEMENT_FOLDER: /app/snippets
+      EDGE_FUNCTIONS_MANAGEMENT_FOLDER: /app/edge-functions
+    volumes:
+      - ${PROJECT_DIR}/volumes/snippets:/app/snippets:Z
+      - ${PROJECT_DIR}/volumes/functions:/app/edge-functions:Z
 
   kong:
     container_name: supabase-kong
@@ -71,7 +80,7 @@ services:
       KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
       # https://github.com/supabase/cli/issues/14
       KONG_DNS_ORDER: LAST,A,CNAME
-      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth,request-termination,ip-restriction
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
       SUPABASE_ANON_KEY: ${ANON_KEY}
@@ -83,7 +92,7 @@ services:
 
   auth:
     container_name: supabase-auth
-    image: supabase/gotrue:v2.180.0
+    image: supabase/gotrue:v2.186.0
     restart: unless-stopped
     <<: [ *default-networks ]
     healthcheck:
@@ -159,7 +168,7 @@ services:
 
   rest:
     container_name: supabase-rest
-    image: postgrest/postgrest:v13.0.7
+    image: postgrest/postgrest:v14.5
     restart: unless-stopped
     <<: [ *default-networks ]
     depends_on:
@@ -181,7 +190,7 @@ services:
   realtime:
     # This container name looks inconsistent but is correct because realtime constructs tenant id by parsing the subdomain
     container_name: realtime-dev.supabase-realtime
-    image: supabase/realtime:v2.56.0
+    image: supabase/realtime:v2.76.5
     restart: unless-stopped
     <<: [ *default-networks ]
     depends_on:
@@ -191,10 +200,11 @@ services:
       analytics:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "curl", "-sSfL", "--head", "-o", "/dev/null", "-H", "Authorization: Bearer ${ANON_KEY}", "http://localhost:4000/api/tenants/realtime-dev/health" ]
+      test: [ "CMD-SHELL", "curl -sSfL --head -o /dev/null -H \"Authorization: Bearer ${ANON_KEY}\" http://localhost:4000/api/tenants/realtime-dev/health" ]
       timeout: 5s
-      interval: 5s
+      interval: 30s
       retries: 3
+      start_period: 10s
     environment:
       PORT: 4000
       DB_HOST: ${POSTGRES_HOST}
@@ -210,23 +220,24 @@ services:
       DNS_NODES: "''"
       RLIMIT_NOFILE: "10000"
       APP_NAME: realtime
-      SEED_SELF_HOST: true
-      RUN_JANITOR: true
+      SEED_SELF_HOST: "true"
+      RUN_JANITOR: "true"
+      DISABLE_HEALTHCHECK_LOGGING: "true"
 
   minio:
     container_name: supabase-minio
-    image: minio/minio
+    image: cgr.dev/chainguard/minio
     restart: unless-stopped
     <<: [ *default-networks ]
-    # ports:
-    #  - 9000:9000
-    #  - 9001:9001
+    #ports:
+    #  - '9000:9000'
+    #  - '9001:9001'
     environment:
-      MINIO_ROOT_USER: supa-storage
-      MINIO_ROOT_PASSWORD: secret1234
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     command: server --console-address ":9001" /data
     healthcheck:
-      test: [ "CMD", "timeout", "5s", "bash", "-c", ":> /dev/tcp/127.0.0.1/9000 || exit 1" ]
+      test: [ "CMD", "mc", "ready", "local" ]
       interval: 2s
       timeout: 10s
       retries: 5
@@ -235,26 +246,21 @@ services:
 
   minio-createbucket:
     container_name: supabase-minio-createbucket
-    image: minio/mc
+    image: cgr.dev/chainguard/minio-client:latest-dev
     <<: [ *default-networks ]
     depends_on:
       minio:
         condition: service_healthy
     entrypoint: >
-      /bin/sh -c " /usr/bin/mc alias set supa-minio http://minio:9000 supa-storage secret1234; /usr/bin/mc mb supa-minio/stub; exit 0; "
+      /bin/sh -ec " mc alias set supa-minio http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} && mc mb --ignore-existing supa-minio/${GLOBAL_S3_BUCKET} "
 
   storage:
     container_name: supabase-storage
-    image: supabase/storage-api:v1.28.1
+    image: supabase/storage-api:v1.37.8
     restart: unless-stopped
     <<: [ *default-networks ]
     volumes:
       - ${PROJECT_DIR}/volumes/storage:/var/lib/storage:z
-    healthcheck:
-      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/status" ]
-      timeout: 5s
-      interval: 5s
-      retries: 3
     depends_on:
       db:
         # Disable this if you are using an external Postgres database
@@ -263,35 +269,49 @@ services:
         condition: service_started
       imgproxy:
         condition: service_started
+      minio-createbucket:
+        condition: service_completed_successfully
       minio:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://storage:5000/status" ]
+      timeout: 5s
+      interval: 5s
+      retries: 3
     environment:
       ANON_KEY: ${ANON_KEY}
       SERVICE_KEY: ${SERVICE_ROLE_KEY}
       POSTGREST_URL: http://rest:3000
       PGRST_JWT_SECRET: ${JWT_SECRET}
       DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      REQUEST_ALLOW_X_FORWARDED_PATH: "true"
       FILE_SIZE_LIMIT: 209715200 # 52428800
       STORAGE_BACKEND: s3
-      GLOBAL_S3_BUCKET: stub
+      # S3 bucket when using S3 backend, directory name when using 'file'
+      GLOBAL_S3_BUCKET: ${GLOBAL_S3_BUCKET}
+      # S3 Backend configuration
       GLOBAL_S3_ENDPOINT: http://minio:9000
       GLOBAL_S3_PROTOCOL: http
       GLOBAL_S3_FORCE_PATH_STYLE: true
-      AWS_ACCESS_KEY_ID: supa-storage
-      AWS_SECRET_ACCESS_KEY: secret1234
-      AWS_DEFAULT_REGION: stub
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
       FILE_STORAGE_BACKEND_PATH: /var/lib/storage
-      TENANT_ID: stub
+      TENANT_ID: ${STORAGE_TENANT_ID}
       # TODO: https://github.com/supabase/storage-api/issues/55
-      REGION: stub
+      REGION: ${REGION}
       ENABLE_IMAGE_TRANSFORMATION: "true"
       IMGPROXY_URL: http://imgproxy:5001
+      # S3 protocol endpoint configuration
+      S3_PROTOCOL_ACCESS_KEY_ID: ${S3_PROTOCOL_ACCESS_KEY_ID}
+      S3_PROTOCOL_ACCESS_KEY_SECRET: ${S3_PROTOCOL_ACCESS_KEY_SECRET}
 
   imgproxy:
     container_name: supabase-imgproxy
-    image: darthsim/imgproxy:v3.8.0
+    image: darthsim/imgproxy:v3.30.1
     restart: unless-stopped
     <<: [ *default-networks ]
+    volumes:
+      - ${PROJECT_DIR}/volumes/storage:/var/lib/storage:z
     healthcheck:
       test: [ "CMD", "imgproxy", "health" ]
       timeout: 5s
@@ -299,12 +319,14 @@ services:
       retries: 3
     environment:
       IMGPROXY_BIND: ":5001"
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
       IMGPROXY_USE_ETAG: "true"
       IMGPROXY_ENABLE_WEBP_DETECTION: ${IMGPROXY_ENABLE_WEBP_DETECTION}
+      IMGPROXY_MAX_SRC_RESOLUTION: 16.8
 
   meta:
     container_name: supabase-meta
-    image: supabase/postgres-meta:v0.93.0
+    image: supabase/postgres-meta:v0.95.2
     restart: unless-stopped
     <<: [ *default-networks ]
     depends_on:
@@ -324,11 +346,12 @@ services:
 
   functions:
     container_name: supabase-edge-functions
-    image: supabase/edge-runtime:v1.69.14
+    image: supabase/edge-runtime:v1.70.3
     restart: unless-stopped
     <<: [ *default-networks ]
     volumes:
       - ${PROJECT_DIR}/volumes/functions:/home/deno/functions:Z
+      - deno-cache:/root/.cache/deno
     depends_on:
       analytics:
         condition: service_healthy
@@ -344,11 +367,11 @@ services:
 
   analytics:
     container_name: supabase-analytics
-    image: supabase/logflare:1.22.6
+    image: supabase/logflare:1.31.2
     restart: unless-stopped
     <<: [ *default-networks ]
     # ports:
-    #  - 4000:4000
+    #   - 4000:4000
     # Uncomment to use Big Query backend for analytics
     # volumes:
     #   - type: bind
@@ -376,7 +399,6 @@ services:
       LOGFLARE_PRIVATE_ACCESS_TOKEN: ${LOGFLARE_PRIVATE_ACCESS_TOKEN}
       LOGFLARE_SINGLE_TENANT: true
       LOGFLARE_SUPABASE_MODE: true
-      LOGFLARE_MIN_CLUSTER_SIZE: 1
 
       # Comment variables to use Big Query backend for analytics
       POSTGRES_BACKEND_URL: postgresql://supabase_admin:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/_supabase
@@ -387,7 +409,6 @@ services:
       # GOOGLE_PROJECT_NUMBER: ${GOOGLE_PROJECT_NUMBER}
 
       # Comment out everything below this point if you are using an external Postgres database
-
   db:
     container_name: supabase-db
     image: supabase/postgres:15.8.1.085
@@ -442,12 +463,7 @@ services:
 
   vector:
     container_name: supabase-vector
-    image: timberio/vector:0.28.1-alpine
-    #deploy:
-    #  resources:
-    #    limits:
-    #      cpus: "1"
-    #      memory: 1000M
+    image: timberio/vector:0.53.0-alpine
     restart: unless-stopped
     <<: [ *default-networks ]
     volumes:
@@ -467,7 +483,7 @@ services:
   # Update the DATABASE_URL if you are using an external Postgres database
   supavisor:
     container_name: supabase-pooler
-    image: supabase/supavisor:2.7.3
+    image: supabase/supavisor:2.7.4
     restart: unless-stopped
     <<: [ *default-networks ]
     ports:
@@ -508,3 +524,4 @@ services:
 
 volumes:
   db-config:
+  deno-cache:
