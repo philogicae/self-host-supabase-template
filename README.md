@@ -4,6 +4,8 @@ This repository provides a convenient template for self-hosting a complete Supab
 
 > All credit to [Supabase](https://github.com/supabase/supabase)
 
+> Official Guide: [Self-Hosting](https://supabase.com/docs/guides/self-hosting/docker)
+
 ## Prerequisites
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
