@@ -2,7 +2,7 @@ name: self-host-supabase
 
 x-networks: &default-networks
   networks:
-    self-host-supabase:
+    - self-host-supabase
   dns:
     - 1.1.1.1
     - 9.9.9.9
