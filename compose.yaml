@@ -241,6 +241,7 @@ services:
       interval: 2s
       timeout: 10s
       retries: 5
+    user: "0:0" # Fix for permission issues
     volumes:
       - ${PROJECT_DIR}/volumes/storage:/data:z
 
