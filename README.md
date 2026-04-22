@@ -1,16 +1,18 @@
 # Self-Hosted Supabase Template
 
-This repository provides a convenient template for self-hosting a complete Supabase environment using Docker Compose. It includes all the necessary services to run a full-featured Supabase instance, including the `database`, `authentication`, `storage`, and the `Supabase Studio UI`. This template comes with the `pgvector` extension enabled by default for AI applications and includes `minio` for local, S3-compatible object storage.
+This repository provides a convenient template for self-hosting a complete Supabase environment using Docker Compose. It includes all the necessary services to run a full-featured Supabase instance, including the `database`, `authentication`, `storage`, and the `Supabase Studio UI`. This template comes with the `pgvector` extension enabled by default for AI applications and includes `rustfs` for local, S3-compatible object storage.
 
 > All credit to [Supabase](https://github.com/supabase/supabase)
 
 > Official Guide: [Self-Hosting](https://supabase.com/docs/guides/self-hosting/docker)
 
 ## Prerequisites
+
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose](https://docs.docker.com/compose/install/)
 
 ## Getting Started
+
 To get your self-hosted Supabase instance up and running, follow these steps:
 
 1.  **Clone the repository:**
@@ -24,19 +26,22 @@ cd self-host-supabase-template
 
 Copy the `.env.example` file to `.env` and fill it with your own values.
 Then run the `deploy.sh` script:
+
 ```bash
 ./deploy.sh
 ```
+
 - This script will:
-    - Create the necessary directories for the database and storage volumes.
-    - Start all the Supabase services in the background using Docker Compose.
+  - Create the necessary directories for the database and storage volumes.
+  - Start all the Supabase services in the background using Docker Compose.
 
 3.  **Access Supabase Studio:**
 
 Once the services are running, you can access the Supabase Studio by opening your web browser and navigating to `http://localhost:3000`.
 
 ## Project Structure
-- `.env.example`: An example environment file that you should copy to `.env` and fill with your own values.
+
+- `.env.example`: An example environment file that you should copy to `.env` and fill with your own values (check `./utils` for generation scripts).
 - `compose.yaml`: The main Docker Compose file that defines all the Supabase services.
 - `volumes`: Contains initialization scripts and configuration files for the various services.
 - `deploy.sh`: A script to deploy the Supabase stack.
