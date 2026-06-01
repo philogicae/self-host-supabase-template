@@ -182,51 +182,51 @@ transforms:
 
 sinks:
   logflare_auth:
-    type: "http"
+    type: 'http'
     inputs:
       - auth_logs
     encoding:
-      codec: "json"
-    method: "post"
+      codec: 'json'
+    method: 'post'
     request:
       retry_max_duration_secs: 30
       retry_initial_backoff_secs: 1
       headers:
         x-api-key: ${LOGFLARE_PUBLIC_ACCESS_TOKEN?LOGFLARE_PUBLIC_ACCESS_TOKEN is required}
-    uri: "http://analytics:4000/api/logs?source_name=gotrue.logs.prod"
+    uri: 'http://analytics:4000/api/logs?source_name=gotrue.logs.prod'
   logflare_realtime:
-    type: "http"
+    type: 'http'
     inputs:
       - realtime_logs
     encoding:
-      codec: "json"
-    method: "post"
+      codec: 'json'
+    method: 'post'
     request:
       retry_max_duration_secs: 30
       retry_initial_backoff_secs: 1
       headers:
         x-api-key: ${LOGFLARE_PUBLIC_ACCESS_TOKEN?LOGFLARE_PUBLIC_ACCESS_TOKEN is required}
-    uri: "http://analytics:4000/api/logs?source_name=realtime.logs.prod"
+    uri: 'http://analytics:4000/api/logs?source_name=realtime.logs.prod'
   logflare_rest:
-    type: "http"
+    type: 'http'
     inputs:
       - rest_logs
     encoding:
-      codec: "json"
-    method: "post"
+      codec: 'json'
+    method: 'post'
     request:
       retry_max_duration_secs: 30
       retry_initial_backoff_secs: 1
       headers:
         x-api-key: ${LOGFLARE_PUBLIC_ACCESS_TOKEN?LOGFLARE_PUBLIC_ACCESS_TOKEN is required}
-    uri: "http://analytics:4000/api/logs?source_name=postgREST.logs.prod"
+    uri: 'http://analytics:4000/api/logs?source_name=postgREST.logs.prod'
   logflare_db:
-    type: "http"
+    type: 'http'
     inputs:
       - db_logs
     encoding:
-      codec: "json"
-    method: "post"
+      codec: 'json'
+    method: 'post'
     request:
       retry_max_duration_secs: 30
       retry_initial_backoff_secs: 1
@@ -234,44 +234,44 @@ sinks:
         x-api-key: ${LOGFLARE_PUBLIC_ACCESS_TOKEN?LOGFLARE_PUBLIC_ACCESS_TOKEN is required}
     # Route directly to analytics like other sinks. Retry handles the startup
     # race where analytics may not be ready yet when early DB logs arrive.
-    uri: "http://analytics:4000/api/logs?source_name=postgres.logs"
+    uri: 'http://analytics:4000/api/logs?source_name=postgres.logs'
   logflare_functions:
-    type: "http"
+    type: 'http'
     inputs:
       - functions_logs
     encoding:
-      codec: "json"
-    method: "post"
+      codec: 'json'
+    method: 'post'
     request:
       retry_max_duration_secs: 30
       retry_initial_backoff_secs: 1
       headers:
         x-api-key: ${LOGFLARE_PUBLIC_ACCESS_TOKEN?LOGFLARE_PUBLIC_ACCESS_TOKEN is required}
-    uri: "http://analytics:4000/api/logs?source_name=deno-relay-logs"
+    uri: 'http://analytics:4000/api/logs?source_name=deno-relay-logs'
   logflare_storage:
-    type: "http"
+    type: 'http'
     inputs:
       - storage_logs
     encoding:
-      codec: "json"
-    method: "post"
+      codec: 'json'
+    method: 'post'
     request:
       retry_max_duration_secs: 30
       retry_initial_backoff_secs: 1
       headers:
         x-api-key: ${LOGFLARE_PUBLIC_ACCESS_TOKEN?LOGFLARE_PUBLIC_ACCESS_TOKEN is required}
-    uri: "http://analytics:4000/api/logs?source_name=storage.logs.prod.2"
+    uri: 'http://analytics:4000/api/logs?source_name=storage.logs.prod.2'
   logflare_kong:
-    type: "http"
+    type: 'http'
     inputs:
       - kong_logs
       - kong_err
     encoding:
-      codec: "json"
-    method: "post"
+      codec: 'json'
+    method: 'post'
     request:
       retry_max_duration_secs: 30
       retry_initial_backoff_secs: 1
       headers:
         x-api-key: ${LOGFLARE_PUBLIC_ACCESS_TOKEN?LOGFLARE_PUBLIC_ACCESS_TOKEN is required}
-    uri: "http://analytics:4000/api/logs?source_name=cloudflare.logs.prod"
+    uri: 'http://analytics:4000/api/logs?source_name=cloudflare.logs.prod'
