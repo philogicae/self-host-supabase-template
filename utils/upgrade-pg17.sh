@@ -6,7 +6,7 @@
 # Upgrade self-hosted Supabase Postgres from 15 to 17.
 #
 # Uses Supabase's pg_upgrade scripts (initiate.sh + complete.sh) inside a
-# temporary PG15 container, then swaps data directories and starts Postgres 17.
+# temporary PG 15 container, then swaps data directories and starts Postgres 17.
 #
 # Usage (must be run as root or with sudo):
 #   cd docker/
@@ -24,7 +24,7 @@
 #   DO NOT DELETE it until you have verified the upgrade was successful.
 #
 # Rollback (if the upgrade fails or you want to revert):
-#   1. docker compose -f docker-compose.yml -f docker-compose.pg17.yml down
+#   1. docker compose down
 #   2. rm -rf ./volumes/db/data
 #   3. mv ./volumes/db/data.bak.pg15 ./volumes/db/data
 #   4. docker compose run --rm db chown -R postgres:postgres /etc/postgresql-custom/
@@ -50,10 +50,18 @@ done
 # --- Configuration ----------------------------------------------------------
 
 # Image used for the upgrade tarball + complete.sh container.
-# Must share glibc with PG15 (the extracted ELF binaries run inside PG15).
+# Must share glibc with PG 15 (the extracted ELF binaries run inside PG15).
+# Pinned to .063: later images bumped glibc, which breaks the ELF extraction.
 PG17_UPGRADE_IMAGE="supabase/postgres:17.6.1.063"
 # Tag in supabase/postgres repo matching the upgrade image (for downloading scripts)
 PG17_SCRIPTS_REF="17.6.1.063"
+
+# Final Postgres 17 image that runs after the upgrade. Pinned here (not read from
+# the compose file). Keep in sync with the db image in compose.yaml.
+# Used for pulling, chowning data/db-config to the target's postgres UID, and
+# running the post-upgrade migrations.
+PG17_TARGET_IMAGE="supabase/postgres:17.6.1.136"
+
 DB_CONTAINER="supabase-db"
 UPGRADE_CONTAINER="supabase-pg-upgrade"
 COMPLETE_CONTAINER="supabase-pg-complete"
@@ -149,18 +157,13 @@ preflight() {
 
     docker compose version >/dev/null 2>&1 || die "Docker Compose not found."
     command -v curl >/dev/null 2>&1 || die "curl is required (for downloading upgrade scripts)."
-    [ -f docker-compose.yml ] || die "Run this script from the docker/ directory."
-    [ -f docker-compose.pg17.yml ] || die "Missing docker-compose.pg17.yml."
+    [ -f compose.yaml ] || die "Run this script from the project root directory."
     [ -f .env ] || die "Missing .env file."
 
     # Resolve db-config volume (exact match on _db-config suffix or bare db-config)
     db_config_vol=$(docker volume ls --filter "name=db-config" --format '{{.Name}}' \
         | grep -E '^db-config$|_db-config$' | head -n 1)
     [ -n "$db_config_vol" ] || die "Could not find db-config volume. Is Supabase running?"
-
-    # Read the target PG17 image from the compose override (what the user will run)
-    PG17_TARGET_IMAGE=$(grep 'image:.*postgres' docker-compose.pg17.yml | awk '{print $2}' | head -n 1)
-    [ -n "$PG17_TARGET_IMAGE" ] || die "Could not read image from docker-compose.pg17.yml."
 
     pg_password=$(grep '^POSTGRES_PASSWORD=' .env | cut -d '=' -f 2- | sed "s/^['\"]//;s/['\"]$//" | head -n 1)
     [ -n "$pg_password" ] || die "POSTGRES_PASSWORD not set in .env."
@@ -184,7 +187,7 @@ preflight() {
         warn "Backup directory already exists: $BACKUP_DIR"
         warn "This is likely from a previous upgrade attempt."
         warn "If you haven't verified that previous upgrade, roll back first:"
-        warn "  1. docker compose -f docker-compose.yml -f docker-compose.pg17.yml down"
+        warn "  1. docker compose down"
         warn "  2. rm -rf $DATA_DIR"
         warn "  3. mv $BACKUP_DIR $DATA_DIR"
         warn "  4. docker compose run --rm db chown -R postgres:postgres /etc/postgresql-custom/"
