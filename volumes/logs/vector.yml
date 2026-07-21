@@ -7,15 +7,15 @@ sources:
     type: docker_logs
     ## only works on this containers
     include_containers:
-      - supabase-kong
-      - supabase-auth
-      - supabase-rest
-      - realtime-dev.supabase-realtime
-      - supabase-storage
-      - supabase-edge-functions
-      - supabase-db
+      - ${COMPOSE_PROJECT_NAME}-kong
+      - ${COMPOSE_PROJECT_NAME}-auth
+      - ${COMPOSE_PROJECT_NAME}-rest
+      - realtime-dev.${COMPOSE_PROJECT_NAME}-realtime
+      - ${COMPOSE_PROJECT_NAME}-storage
+      - ${COMPOSE_PROJECT_NAME}-edge-functions
+      - ${COMPOSE_PROJECT_NAME}-db
     #exclude_containers:
-    #  - supabase-vector
+    #  - ${COMPOSE_PROJECT_NAME}-vector
 
 transforms:
   project_logs:
@@ -39,13 +39,13 @@ transforms:
     inputs:
       - project_logs
     route:
-      kong: '.appname == "supabase-kong" || .appname == "supabase-envoy"'
-      auth: '.appname == "supabase-auth"'
-      rest: '.appname == "supabase-rest"'
-      realtime: '.appname == "realtime-dev.supabase-realtime"'
-      storage: '.appname == "supabase-storage"'
-      functions: '.appname == "supabase-edge-functions"'
-      db: '.appname == "supabase-db"'
+      kong: '.appname == "${COMPOSE_PROJECT_NAME}-kong" || .appname == "${COMPOSE_PROJECT_NAME}-envoy"'
+      auth: '.appname == "${COMPOSE_PROJECT_NAME}-auth"'
+      rest: '.appname == "${COMPOSE_PROJECT_NAME}-rest"'
+      realtime: '.appname == "realtime-dev.${COMPOSE_PROJECT_NAME}-realtime"'
+      storage: '.appname == "${COMPOSE_PROJECT_NAME}-storage"'
+      functions: '.appname == "${COMPOSE_PROJECT_NAME}-edge-functions"'
+      db: '.appname == "${COMPOSE_PROJECT_NAME}-db"'
   # Ignores non nginx errors since they are related with kong booting up
   kong_logs:
     type: remap

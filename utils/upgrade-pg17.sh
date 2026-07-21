@@ -62,7 +62,7 @@ PG17_SCRIPTS_REF="17.6.1.063"
 # running the post-upgrade migrations.
 PG17_TARGET_IMAGE="supabase/postgres:17.6.1.136"
 
-DB_CONTAINER="supabase-db"
+DB_CONTAINER="${COMPOSE_PROJECT_NAME:-self-host-supabase}-db"
 UPGRADE_CONTAINER="supabase-pg-upgrade"
 COMPLETE_CONTAINER="supabase-pg-complete"
 

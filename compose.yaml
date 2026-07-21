@@ -1,4 +1,4 @@
-name: self-host-supabase
+name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}
 
 x-networks: &default-networks
   networks:
@@ -9,18 +9,17 @@ x-networks: &default-networks
 
 networks:
   self-host-supabase:
-    name: self-host-supabase
+    name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}
     driver: bridge
 
 services:
-
   studio:
-    container_name: supabase-studio
-    image: supabase/studio:2026.06.03-sha-0bca601
+    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-studio
+    image: supabase/studio:2026.07.07-sha-a6a04f2
     restart: unless-stopped
     <<: [ *default-networks ]
     healthcheck:
-      test: [ "CMD-SHELL", "node -e \"fetch('http://localhost:3000/api/platform/profile').then((r) => {if (r.status !== 200) throw new Error(r.status)})\"" ]
+      test: [ "CMD-SHELL", 'node -e "fetch(''http://localhost:3000/api/platform/profile'').then((r) => {if (r.status !== 200) throw new Error(r.status)})"' ]
       timeout: 10s
       interval: 5s
       retries: 3
@@ -76,7 +75,7 @@ services:
       - ${PROJECT_DIR}/volumes/functions:/app/edge-functions:ro,z
 
   kong:
-    container_name: supabase-kong
+    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-kong
     image: kong/kong:3.9.1
     restart: unless-stopped
     <<: [ *default-networks ]
@@ -99,6 +98,7 @@ services:
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /usr/local/kong/kong.yml
+      KONG_ROUTER_FLAVOR: expressions
       # https://github.com/supabase/cli/issues/14
       KONG_DNS_ORDER: LAST,A,CNAME
       KONG_DNS_NOT_FOUND_TTL: 1
@@ -119,7 +119,7 @@ services:
     entrypoint: [ "/bin/sh", "/home/kong/kong-entrypoint.sh" ]
 
   auth:
-    container_name: supabase-auth
+    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-auth
     image: supabase/gotrue:v2.189.0
     restart: unless-stopped
     <<: [ *default-networks ]
@@ -156,7 +156,7 @@ services:
       # For Podman, use: GOTRUE_JWT_KEYS: ${JWT_KEYS}
       #GOTRUE_JWT_KEYS: ${JWT_KEYS:-[]}
 
-      GOTRUE_JWT_ISSUER: ${API_EXTERNAL_URL}/auth/v1
+      GOTRUE_JWT_ISSUER: ${API_EXTERNAL_URL}
 
       GOTRUE_EXTERNAL_EMAIL_ENABLED: ${ENABLE_EMAIL_SIGNUP}
       GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: ${ENABLE_ANONYMOUS_USERS}
@@ -184,17 +184,17 @@ services:
       # GOTRUE_EXTERNAL_GOOGLE_ENABLED: ${GOOGLE_ENABLED}
       # GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       # GOTRUE_EXTERNAL_GOOGLE_SECRET: ${GOOGLE_SECRET}
-      # GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${API_EXTERNAL_URL}/auth/v1/callback
+      # GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${API_EXTERNAL_URL}/callback
 
       # GOTRUE_EXTERNAL_GITHUB_ENABLED: ${GITHUB_ENABLED}
       # GOTRUE_EXTERNAL_GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
       # GOTRUE_EXTERNAL_GITHUB_SECRET: ${GITHUB_SECRET}
-      # GOTRUE_EXTERNAL_GITHUB_REDIRECT_URI: ${API_EXTERNAL_URL}/auth/v1/callback
+      # GOTRUE_EXTERNAL_GITHUB_REDIRECT_URI: ${API_EXTERNAL_URL}/callback
 
       # GOTRUE_EXTERNAL_AZURE_ENABLED: ${AZURE_ENABLED}
       # GOTRUE_EXTERNAL_AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
       # GOTRUE_EXTERNAL_AZURE_SECRET: ${AZURE_SECRET}
-      # GOTRUE_EXTERNAL_AZURE_REDIRECT_URI: ${API_EXTERNAL_URL}/auth/v1/callback
+      # GOTRUE_EXTERNAL_AZURE_REDIRECT_URI: ${API_EXTERNAL_URL}/callback
 
       # Uncomment to configure SMS delivery (phone auth and phone MFA).
       # GOTRUE_SMS_PROVIDER: ${SMS_PROVIDER}
@@ -219,10 +219,12 @@ services:
       # GOTRUE_MFA_MAX_ENROLLED_FACTORS: ${MFA_MAX_ENROLLED_FACTORS}
 
       # SAML SSO
+      # See: https://supabase.com/docs/guides/self-hosting/self-hosted-saml-sso
       # GOTRUE_SAML_ENABLED: ${SAML_ENABLED}
       # GOTRUE_SAML_PRIVATE_KEY: ${SAML_PRIVATE_KEY}
       # GOTRUE_SAML_ALLOW_ENCRYPTED_ASSERTIONS: ${SAML_ALLOW_ENCRYPTED_ASSERTIONS}
       # GOTRUE_SAML_RELAY_STATE_VALIDITY_PERIOD: ${SAML_RELAY_STATE_VALIDITY_PERIOD}
+      # Optional, defaults to API_EXTERNAL_URL if not set
       # GOTRUE_SAML_EXTERNAL_URL: ${SAML_EXTERNAL_URL}
       # GOTRUE_SAML_RATE_LIMIT_ASSERTION: ${SAML_RATE_LIMIT_ASSERTION}
 
@@ -249,7 +251,7 @@ services:
       # GOTRUE_HOOK_SEND_EMAIL_SECRETS: "v1,whsec_VGhpcyBpcyBhbiBleGFtcGxlIG9mIGEgc2hvcnRlciBCYXNlNjQgc3RyaW5n"
 
   rest:
-    container_name: supabase-rest
+    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-rest
     image: postgrest/postgrest:v14.12
     restart: unless-stopped
     <<: [ *default-networks ]
@@ -284,7 +286,7 @@ services:
 
   realtime:
     # This container name looks inconsistent but is correct because realtime constructs tenant id by parsing the subdomain
-    container_name: realtime-dev.supabase-realtime
+    container_name: realtime-dev.${COMPOSE_PROJECT_NAME:-self-host-supabase}-realtime
     image: supabase/realtime:v2.102.3
     restart: unless-stopped
     <<: [ *default-networks ]
@@ -293,7 +295,7 @@ services:
         # Disable this if you are using an external Postgres database
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "curl -sSfL --head -o /dev/null -H \"Authorization: Bearer ${ANON_KEY}\" http://localhost:4000/api/tenants/realtime-dev/health" ]
+      test: [ "CMD-SHELL", 'curl -sSfL --head -o /dev/null -H "Authorization: Bearer ${ANON_KEY}" http://localhost:4000/api/tenants/realtime-dev/health' ]
       timeout: 5s
       interval: 30s
       retries: 3
@@ -305,7 +307,7 @@ services:
       DB_USER: supabase_admin
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_NAME: ${POSTGRES_DB}
-      DB_AFTER_CONNECT_QUERY: 'SET search_path TO _realtime'
+      DB_AFTER_CONNECT_QUERY: "SET search_path TO _realtime"
       DB_ENC_KEY: ${REALTIME_DB_ENC_KEY:-supabaserealtime}
 
       # Legacy symmetric HS256 key
@@ -326,7 +328,7 @@ services:
       DISABLE_HEALTHCHECK_LOGGING: "true"
 
   rustfs:
-    container_name: supabase-rustfs
+    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-rustfs
     image: rustfs/rustfs
     restart: unless-stopped
     <<: [ *default-networks ]
@@ -351,7 +353,7 @@ services:
       - ${PROJECT_DIR}/volumes/storage:/data:z
 
   rustfs-createbucket:
-    container_name: supabase-rustfs-createbucket
+    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-rustfs-createbucket
     image: rustfs/rc
     <<: [ *default-networks ]
     depends_on:
@@ -361,7 +363,7 @@ services:
       /bin/sh -ec " rc alias set supa-rustfs http://rustfs:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD} && rc mb --ignore-existing supa-rustfs/${GLOBAL_S3_BUCKET} "
 
   storage:
-    container_name: supabase-storage
+    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-storage
     image: supabase/storage-api:v1.60.4
     restart: unless-stopped
     <<: [ *default-networks ]
@@ -426,7 +428,7 @@ services:
       S3_PROTOCOL_ACCESS_KEY_SECRET: ${S3_PROTOCOL_ACCESS_KEY_SECRET}
 
   imgproxy:
-    container_name: supabase-imgproxy
+    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-imgproxy
     image: darthsim/imgproxy:v3.30.1
     restart: unless-stopped
     <<: [ *default-networks ]
@@ -445,7 +447,7 @@ services:
       IMGPROXY_MAX_SRC_RESOLUTION: 16.8
 
   meta:
-    container_name: supabase-meta
+    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-meta
     image: supabase/postgres-meta:v0.96.6
     restart: unless-stopped
     <<: [ *default-networks ]
@@ -463,7 +465,7 @@ services:
       CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
 
   functions:
-    container_name: supabase-edge-functions
+    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-edge-functions
     image: supabase/edge-runtime:v1.74.0
     restart: unless-stopped
     <<: [ *default-networks ]
@@ -481,21 +483,25 @@ services:
     environment:
       # Legacy symmetric HS256 key
       JWT_SECRET: ${JWT_SECRET}
+      # JWKS for token verification (EC public + legacy symmetric).
+      # For Podman, use: SUPABASE_JWKS: ${JWT_JWKS}
+      #SUPABASE_JWKS: ${JWT_JWKS:-{"keys":[]}}
+
       SUPABASE_URL: http://kong:8000
       SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
       # Legacy API keys (HS256-signed JWTs)
       SUPABASE_ANON_KEY: ${ANON_KEY}
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
       # New opaque API keys
-      SUPABASE_PUBLISHABLE_KEYS: "{\"default\":\"${SUPABASE_PUBLISHABLE_KEY:-}\"}"
-      SUPABASE_SECRET_KEYS: "{\"default\":\"${SUPABASE_SECRET_KEY:-}\"}"
+      SUPABASE_PUBLISHABLE_KEYS: '{"default":"${SUPABASE_PUBLISHABLE_KEY:-}"}'
+      SUPABASE_SECRET_KEYS: '{"default":"${SUPABASE_SECRET_KEY:-}"}'
       SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
       # TODO: Allow configuring VERIFY_JWT per function.
       VERIFY_JWT: "${FUNCTIONS_VERIFY_JWT}"
     command: [ "start", "--main-service", "/home/deno/functions/main" ]
 
   analytics:
-    container_name: supabase-analytics
+    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-analytics
     image: supabase/logflare:1.43.1
     restart: unless-stopped
     <<: [ *default-networks ]
@@ -540,7 +546,7 @@ services:
 
       # Comment out everything below this point if you are using an external Postgres database
   db:
-    container_name: supabase-db
+    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-db
     image: supabase/postgres:17.6.1.136
     restart: unless-stopped
     <<: [ *default-networks ]
@@ -579,17 +585,10 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXP: ${JWT_EXPIRY}
-    command:
-      [
-        "postgres",
-        "-c",
-        "config_file=/etc/postgresql/postgresql.conf",
-        "-c",
-        "log_min_messages=fatal" # prevents Realtime polling queries from appearing in logs
-      ]
+    command: [ "postgres", "-c", "config_file=/etc/postgresql/postgresql.conf", "-c", "log_min_messages=fatal" ] # prevents Realtime polling queries from appearing in logs
 
   vector:
-    container_name: supabase-vector
+    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-vector
     image: timberio/vector:0.53.0-alpine
     restart: unless-stopped
     <<: [ *default-networks ]
@@ -606,13 +605,14 @@ services:
         condition: service_healthy
     environment:
       LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-self-host-supabase}
     command: [ "--config", "/etc/vector/vector.yml" ]
     security_opt:
       - "label=disable"
 
   # Update the DATABASE_URL if you are using an external Postgres database
   supavisor:
-    container_name: supabase-pooler
+    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-pooler
     image: supabase/supavisor:2.9.5
     restart: unless-stopped
     <<: [ *default-networks ]
@@ -650,7 +650,7 @@ services:
       POOLER_POOL_MODE: transaction
       DB_POOL_SIZE: ${POOLER_DB_POOL_SIZE}
       RLIMIT_NOFILE: 10000 # bug fix
-    command: [ "/bin/sh", "-c", "/app/bin/migrate && /app/bin/supavisor eval \"$$(cat /etc/pooler/pooler.exs)\" && /app/bin/server" ]
+    command: [ "/bin/sh", "-c", '/app/bin/migrate && /app/bin/supavisor eval "$$(cat /etc/pooler/pooler.exs)" && /app/bin/server' ]
 
 volumes:
   db-config:

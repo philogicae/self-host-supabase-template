@@ -3,11 +3,10 @@
 // This enables autocomplete, go to definition, etc.
 
 Deno.serve(async () => {
-  return new Response(
-    `"Hello from Edge Functions!"`,
-    { headers: { "Content-Type": "application/json" } },
-  )
-})
+	return new Response(`"Hello from Edge Functions!"`, {
+		headers: { "Content-Type": "application/json" },
+	});
+});
 
 // To invoke:
 // curl 'http://localhost:<KONG_HTTP_PORT>/functions/v1/hello' \

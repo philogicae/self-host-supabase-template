@@ -79,7 +79,7 @@ resources:
             - endpoint:
                 address:
                   socket_address:
-                    address: realtime-dev.supabase-realtime
+                    address: realtime
                     port_value: 4000
     health_checks:
       - timeout: 2s
