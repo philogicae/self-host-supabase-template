@@ -15,7 +15,7 @@ networks:
 services:
   studio:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-studio
-    image: supabase/studio:2026.07.07-sha-a6a04f2
+    image: supabase/studio:2026.08.03-sha-022b374
     restart: unless-stopped
     <<: [ *default-networks ]
     healthcheck:
@@ -57,17 +57,10 @@ services:
       SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY}
       SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY}
 
-      # LOGFLARE_API_KEY is deprecated
-      LOGFLARE_API_KEY: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
-      LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
+      # Studio feature flags (see upstream docker-compose.logs.yml)
+      ENABLED_FEATURES_LOGS_ALL: "true"
       LOGFLARE_PRIVATE_ACCESS_TOKEN: ${LOGFLARE_PRIVATE_ACCESS_TOKEN}
-
       LOGFLARE_URL: http://analytics:4000
-      NEXT_PUBLIC_ENABLE_LOGS: "true"
-      # Comment to use Big Query backend for analytics
-      NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
-      # Uncomment to use Big Query backend for analytics
-      # NEXT_ANALYTICS_BACKEND_PROVIDER: bigquery
       SNIPPETS_MANAGEMENT_FOLDER: /app/snippets
       EDGE_FUNCTIONS_MANAGEMENT_FOLDER: /app/edge-functions
     volumes:
@@ -76,7 +69,7 @@ services:
 
   kong:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-kong
-    image: kong/kong:3.9.1
+    image: kong/kong:3.9.3
     restart: unless-stopped
     <<: [ *default-networks ]
     healthcheck:
@@ -102,6 +95,7 @@ services:
       # https://github.com/supabase/cli/issues/14
       KONG_DNS_ORDER: LAST,A,CNAME
       KONG_DNS_NOT_FOUND_TTL: 1
+      KONG_DNS_VALID_TTL: 5
       KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth,request-termination,ip-restriction,post-function
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
@@ -329,7 +323,7 @@ services:
 
   rustfs:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-rustfs
-    image: rustfs/rustfs
+    image: rustfs/rustfs:1.0.0-beta.11
     restart: unless-stopped
     <<: [ *default-networks ]
     #ports:

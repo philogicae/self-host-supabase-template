@@ -15,5 +15,7 @@ CREATE EXTENSION IF NOT EXISTS hstore WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS hypopg WITH SCHEMA extensions;
 
 CREATE EXTENSION IF NOT EXISTS index_advisor WITH SCHEMA extensions;
+-- For fast substring ILIKE on metadata JSON content (trigram GIN index)
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA extensions;
 
 COMMIT;

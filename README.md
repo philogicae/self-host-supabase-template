@@ -45,7 +45,7 @@ cp .env.example .env
 sh ./utils/generate-keys.sh
 ```
 
-This generates all required secrets (`JWT_SECRET`, `ANON_KEY`, `SERVICE_ROLE_KEY`, database passwords, encryption keys, S3 credentials, etc.) and optionally writes them directly to your `.env` file. Review the `.env` file afterwards and adjust URLs, dashboard credentials, and any auth provider settings to your needs.
+This generates all required secrets (`JWT_SECRET`, `ANON_KEY`, `SERVICE_ROLE_KEY`, database passwords, encryption keys, S3 credentials, etc.). **When prompted, answer `y` to write them into your `.env` file** — otherwise the stack starts with the placeholder values from `.env.example`. Review the `.env` file afterwards and adjust URLs, dashboard credentials, and any auth provider settings to your needs.
 
 > **Asymmetric keys (optional):** To use ES256 asymmetric JWT auth with opaque API keys, also run:
 >
@@ -63,11 +63,15 @@ This generates all required secrets (`JWT_SECRET`, `ANON_KEY`, `SERVICE_ROLE_KEY
 
 This creates the necessary volume directories and starts all services in the background via Docker Compose.
 
+> **Note:** the stack exposes ports `8000`/`8443` (API gateway) and `5432`/`6543` (Supavisor). Stop any local service on those ports first, or change them in your `.env` (`KONG_HTTP_PORT`, `POSTGRES_PORT`, `POOLER_PROXY_PORT_TRANSACTION`). The first `docker compose up` pulls ~10 large images, so startup can take a few minutes — watch progress with `docker compose ps` and `docker compose logs -f`.
+
 5. **Access Supabase Studio:**
 
 Open `http://localhost:8000` in your browser and log in with the `DASHBOARD_USERNAME` and `DASHBOARD_PASSWORD` from your `.env` file.
 
 The REST API is available at `http://localhost:8000/rest/v1/` and the Auth API at `http://localhost:8000/auth/v1/`.
+
+> **Not loading?** Studio starts last, after the database and gateway are healthy. Run `docker compose ps` to check service status and `docker compose logs -f` for errors.
 
 ## Multi-Instance Support
 
@@ -116,7 +120,7 @@ All scripts are in the `utils/` directory:
     │   ├── kong.yml      # Kong routing configuration
     │   └── kong-entrypoint.sh
     ├── db/               # Database init scripts (roles, JWT, webhooks, custom SQL)
-    ├── functions/        # Edge function examples (hello, main)
+    ├── functions/        # Edge function examples (hello, main) + deno.jsonc import map
     ├── logs/             # Vector log shipping configuration
     ├── pooler/           # Supavisor pooler configuration
     ├── proxy/            # TLS proxy configurations
