@@ -102,6 +102,8 @@ services:
       KONG_DNS_NOT_FOUND_TTL: 1
       KONG_DNS_VALID_TTL: 5
       KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth,request-termination,ip-restriction,post-function
+      KONG_NGINX_WORKER_PROCESSES: 2
+      KONG_MEM_CACHE_SIZE: 64m
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
       KONG_PROXY_ACCESS_LOG: /dev/stdout combined
@@ -400,7 +402,7 @@ services:
           "--no-verbose",
           "--tries=1",
           "--spider",
-          "http://localhost:5000/status",
+          "http://127.0.0.1:5000/status",
         ]
       timeout: 5s
       interval: 5s
