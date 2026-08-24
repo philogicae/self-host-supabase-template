@@ -77,6 +77,12 @@ services:
     image: kong/kong:3.9.3
     restart: unless-stopped
     <<: [*default-networks]
+    # Expose `api-gw` as a network alias so internal configs that reference the
+    # upstream v0.8.0 gateway hostname resolve to Kong (our active gateway).
+    networks:
+      self-host-supabase:
+        aliases:
+          - api-gw
     healthcheck:
       test: ["CMD", "kong", "health"]
       interval: 5s
@@ -86,8 +92,8 @@ services:
       studio:
         condition: service_healthy
     ports:
-      - ${KONG_HTTP_PORT}:8000/tcp
-      - ${KONG_HTTPS_PORT}:8443/tcp
+      - ${KONG_HTTP_PORT:-${API_GW_HTTP_PORT:-8000}}:8000/tcp
+      - ${KONG_HTTPS_PORT:-8443}:8443/tcp
     volumes:
       - ${PROJECT_DIR}/volumes/api/kong.yml:/home/kong/temp.yml:ro,z
       - ${PROJECT_DIR}/volumes/api/kong-entrypoint.sh:/home/kong/kong-entrypoint.sh:ro,z
