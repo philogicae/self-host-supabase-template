@@ -14,7 +14,7 @@ A convenient template for self-hosting a complete Supabase environment using Doc
 - **Kong** API gateway with expression-based routing
 - **Envoy** as an alternative API gateway (pre-configured, optional)
 - **TLS proxy** support via Caddy or Nginx with automatic Let's Encrypt certificates
-- **Multi-instance support** — run multiple Supabase stacks on the same server via `COMPOSE_PROJECT_NAME`
+- **Multi-instance support** - run multiple Supabase stacks on the same server via `COMPOSE_PROJECT_NAME`
 - **Utility scripts** for secret generation, key rotation, password management, and schema ownership
 - **Comprehensive `.env.example`** with documented settings for OAuth, SAML SSO, MFA, and SMTP
 
@@ -45,7 +45,7 @@ cp .env.example .env
 sh ./utils/generate-keys.sh
 ```
 
-This generates all required secrets (`JWT_SECRET`, `ANON_KEY`, `SERVICE_ROLE_KEY`, database passwords, encryption keys, S3 credentials, etc.). **When prompted, answer `y` to write them into your `.env` file** — otherwise the stack starts with the placeholder values from `.env.example`. Review the `.env` file afterwards and adjust URLs, dashboard credentials, and any auth provider settings to your needs.
+This generates all required secrets (`JWT_SECRET`, `ANON_KEY`, `SERVICE_ROLE_KEY`, database passwords, encryption keys, S3 credentials, etc.). **When prompted, answer `y` to write them into your `.env` file** - otherwise the stack starts with the placeholder values from `.env.example`. Review the `.env` file afterwards and adjust URLs, dashboard credentials, and any auth provider settings to your needs.
 
 > **Asymmetric keys (optional):** To use ES256 asymmetric JWT auth with opaque API keys, also run:
 >
@@ -63,7 +63,7 @@ This generates all required secrets (`JWT_SECRET`, `ANON_KEY`, `SERVICE_ROLE_KEY
 
 This creates the necessary volume directories and starts all services in the background via Docker Compose.
 
-> **Note:** the stack exposes ports `8000`/`8443` (API gateway) and `5432`/`6543` (Supavisor). Stop any local service on those ports first, or change them in your `.env` (`KONG_HTTP_PORT`, `POSTGRES_PORT`, `POOLER_PROXY_PORT_TRANSACTION`). The first `docker compose up` pulls ~10 large images, so startup can take a few minutes — watch progress with `docker compose ps` and `docker compose logs -f`.
+> **Note:** the stack exposes ports `8000`/`8443` (API gateway) and `5432`/`6543` (Supavisor). Stop any local service on those ports first, or change them in your `.env` (`KONG_HTTP_PORT`, `POSTGRES_PORT`, `POOLER_PROXY_PORT_TRANSACTION`). The first `docker compose up` pulls ~10 large images, so startup can take a few minutes - watch progress with `docker compose ps` and `docker compose logs -f`.
 
 5. **Access Supabase Studio:**
 
@@ -85,10 +85,10 @@ All container, volume, and network names are prefixed with this value, preventin
 
 ## TLS Proxy (HTTPS)
 
-Optional Caddy and Nginx reverse proxy configurations with automatic Let's Encrypt certificates are included in `volumes/proxy/`. These are configuration templates — you'll need to wire them into your Docker Compose setup or run them standalone:
+Optional Caddy and Nginx reverse proxy configurations with automatic Let's Encrypt certificates are included in `volumes/proxy/`. These are configuration templates - you'll need to wire them into your Docker Compose setup or run them standalone:
 
-- **Caddy**: `volumes/proxy/caddy/Caddyfile` — automatic HTTPS with no extra setup
-- **Nginx**: `volumes/proxy/nginx/supabase-nginx.conf.tpl` — uses Certbot for Let's Encrypt
+- **Caddy**: `volumes/proxy/caddy/Caddyfile` - automatic HTTPS with no extra setup
+- **Nginx**: `volumes/proxy/nginx/supabase-nginx.conf.tpl` - uses Certbot for Let's Encrypt
 
 Set `PROXY_DOMAIN` (and `CERTBOT_EMAIL` for Nginx) in your `.env` file. See the [HTTPS proxy guide](https://supabase.com/docs/guides/self-hosting/self-hosted-proxy-https).
 
@@ -108,7 +108,7 @@ All scripts are in the `utils/` directory:
 
 ```
 .
-├── .env.example          # Example environment file — copy to .env and fill in
+├── .env.example          # Example environment file - copy to .env and fill in
 ├── compose.yaml          # Docker Compose file defining all Supabase services
 ├── deploy.sh             # Deploy script (creates volumes + starts services)
 ├── reset.sh              # Reset script (stops containers, removes volumes, resets git state)

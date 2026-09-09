@@ -16,7 +16,7 @@ networks:
 services:
   studio:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-studio
-    image: supabase/studio:2026.08.03-sha-022b374
+    image: supabase/studio:2026.09.07-sha-7996410
     restart: unless-stopped
     <<: [*default-networks]
     healthcheck:
@@ -127,7 +127,7 @@ services:
 
   auth:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-auth
-    image: supabase/gotrue:v2.189.0
+    image: supabase/gotrue:v2.196.0
     restart: unless-stopped
     <<: [*default-networks]
     healthcheck:
@@ -267,7 +267,7 @@ services:
 
   rest:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-rest
-    image: postgrest/postgrest:v14.12
+    image: postgrest/postgrest:v14.17
     restart: unless-stopped
     <<: [*default-networks]
     depends_on:
@@ -302,7 +302,7 @@ services:
   realtime:
     # This container name looks inconsistent but is correct because realtime constructs tenant id by parsing the subdomain
     container_name: realtime-dev.${COMPOSE_PROJECT_NAME:-self-host-supabase}-realtime
-    image: supabase/realtime:v2.102.3
+    image: supabase/realtime:v2.134.10
     restart: unless-stopped
     <<: [*default-networks]
     depends_on:
@@ -348,7 +348,7 @@ services:
 
   rustfs:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-rustfs
-    image: rustfs/rustfs:1.0.0-beta.11
+    image: rustfs/rustfs:v1.0.0-rc.5
     restart: unless-stopped
     <<: [*default-networks]
     #ports:
@@ -383,7 +383,7 @@ services:
 
   storage:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-storage
-    image: supabase/storage-api:v1.60.4
+    image: supabase/storage-api:v1.74.0
     restart: unless-stopped
     <<: [*default-networks]
     volumes:
@@ -456,7 +456,7 @@ services:
 
   imgproxy:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-imgproxy
-    image: darthsim/imgproxy:v3.30.1
+    image: darthsim/imgproxy:v3.31.4
     restart: unless-stopped
     <<: [*default-networks]
     volumes:
@@ -475,7 +475,7 @@ services:
 
   meta:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-meta
-    image: supabase/postgres-meta:v0.96.6
+    image: supabase/postgres-meta:v0.99.0
     restart: unless-stopped
     <<: [*default-networks]
     depends_on:
@@ -493,7 +493,7 @@ services:
 
   functions:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-edge-functions
-    image: supabase/edge-runtime:v1.74.0
+    image: supabase/edge-runtime:v1.76.2
     restart: unless-stopped
     <<: [*default-networks]
     volumes:
@@ -529,7 +529,7 @@ services:
 
   analytics:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-analytics
-    image: supabase/logflare:1.43.1
+    image: supabase/logflare:1.50.10
     restart: unless-stopped
     <<: [*default-networks]
     # ports:
@@ -655,7 +655,7 @@ services:
   # Update the DATABASE_URL if you are using an external Postgres database
   supavisor:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-pooler
-    image: supabase/supavisor:2.9.5
+    image: supabase/supavisor:2.9.12
     restart: unless-stopped
     <<: [*default-networks]
     ports:
