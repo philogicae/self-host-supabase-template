@@ -372,10 +372,10 @@ services:
         config:
           remove:
             headers:
-              - 'sb-api-key'
+              - "sb-api-key"
           add:
             headers:
-              - 'sb-api-key:$LUA_FUNCTIONS_EXPR'
+              - "sb-api-key:$LUA_FUNCTIONS_EXPR"
       - name: post-function
         config:
           access:
