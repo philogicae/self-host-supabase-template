@@ -16,7 +16,7 @@ networks:
 services:
   studio:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-studio
-    image: supabase/studio:2026.09.07-sha-7996410
+    image: supabase/studio:2026.10.12-sha-3699278
     restart: unless-stopped
     <<: [*default-networks]
     healthcheck:
@@ -127,7 +127,7 @@ services:
 
   auth:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-auth
-    image: supabase/gotrue:v2.196.0
+    image: supabase/gotrue:v2.197.0
     restart: unless-stopped
     <<: [*default-networks]
     healthcheck:
@@ -195,7 +195,7 @@ services:
 
       GOTRUE_EXTERNAL_PHONE_ENABLED: ${ENABLE_PHONE_SIGNUP}
       GOTRUE_SMS_AUTOCONFIRM: ${ENABLE_PHONE_AUTOCONFIRM}
-      # Uncomment to enable OAuth / social login providers.
+      # Uncomment to enable OAuth / social sign-in providers.
       # GOTRUE_EXTERNAL_GOOGLE_ENABLED: ${GOOGLE_ENABLED}
       # GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       # GOTRUE_EXTERNAL_GOOGLE_SECRET: ${GOOGLE_SECRET}
@@ -267,7 +267,7 @@ services:
 
   rest:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-rest
-    image: postgrest/postgrest:v14.17
+    image: postgrest/postgrest:v14.18
     restart: unless-stopped
     <<: [*default-networks]
     depends_on:
@@ -301,7 +301,7 @@ services:
   realtime:
     # This container name looks inconsistent but is correct because realtime constructs tenant id by parsing the subdomain
     container_name: realtime-dev.${COMPOSE_PROJECT_NAME:-self-host-supabase}-realtime
-    image: supabase/realtime:v2.134.10
+    image: supabase/realtime:v2.143.3
     restart: unless-stopped
     <<: [*default-networks]
     depends_on:
@@ -344,10 +344,14 @@ services:
       SEED_SELF_HOST: "true"
       RUN_JANITOR: "true"
       DISABLE_HEALTHCHECK_LOGGING: "true"
+      # Workaround for realtime#2289: without an explicit region, Postgres
+      # Changes can miss events for a few seconds every 10 minutes while the
+      # database connection is restarted. Remove once upstream fixes it.
+      REGION: us-east-1
 
   rustfs:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-rustfs
-    image: rustfs/rustfs:v1.0.0-rc.5
+    image: rustfs/rustfs:1.0.1
     restart: unless-stopped
     <<: [*default-networks]
     #ports:
@@ -382,7 +386,7 @@ services:
 
   storage:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-storage
-    image: supabase/storage-api:v1.74.0
+    image: supabase/storage-api:v1.81.0
     restart: unless-stopped
     <<: [*default-networks]
     volumes:
@@ -474,7 +478,7 @@ services:
 
   meta:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-meta
-    image: supabase/postgres-meta:v0.99.0
+    image: supabase/postgres-meta:v0.100.0
     restart: unless-stopped
     <<: [*default-networks]
     depends_on:
@@ -492,7 +496,7 @@ services:
 
   functions:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-edge-functions
-    image: supabase/edge-runtime:v1.76.2
+    image: supabase/edge-runtime:v1.77.4
     restart: unless-stopped
     <<: [*default-networks]
     volumes:
@@ -535,7 +539,7 @@ services:
 
   analytics:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-analytics
-    image: supabase/logflare:1.50.10
+    image: supabase/logflare:1.50.15
     restart: unless-stopped
     <<: [*default-networks]
     # ports:
@@ -660,7 +664,7 @@ services:
   # Update the DATABASE_URL if you are using an external Postgres database
   supavisor:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-pooler
-    image: supabase/supavisor:2.9.12
+    image: supabase/supavisor:2.9.13
     restart: unless-stopped
     <<: [*default-networks]
     ports:
