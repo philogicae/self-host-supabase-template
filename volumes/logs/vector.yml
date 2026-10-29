@@ -7,7 +7,9 @@ sources:
     type: docker_logs
     ## only works on this containers
     include_containers:
+      - ${COMPOSE_PROJECT_NAME}-api-gw
       - ${COMPOSE_PROJECT_NAME}-kong
+      - ${COMPOSE_PROJECT_NAME}-envoy
       - ${COMPOSE_PROJECT_NAME}-auth
       - ${COMPOSE_PROJECT_NAME}-rest
       - realtime-dev.${COMPOSE_PROJECT_NAME}-realtime
@@ -39,14 +41,14 @@ transforms:
     inputs:
       - project_logs
     route:
-      kong: '.appname == "${COMPOSE_PROJECT_NAME}-kong" || .appname == "${COMPOSE_PROJECT_NAME}-envoy"'
+      kong: '.appname == "${COMPOSE_PROJECT_NAME}-api-gw" || .appname == "${COMPOSE_PROJECT_NAME}-kong" || .appname == "${COMPOSE_PROJECT_NAME}-envoy"'
       auth: '.appname == "${COMPOSE_PROJECT_NAME}-auth"'
       rest: '.appname == "${COMPOSE_PROJECT_NAME}-rest"'
       realtime: '.appname == "realtime-dev.${COMPOSE_PROJECT_NAME}-realtime"'
       storage: '.appname == "${COMPOSE_PROJECT_NAME}-storage"'
       functions: '.appname == "${COMPOSE_PROJECT_NAME}-edge-functions"'
       db: '.appname == "${COMPOSE_PROJECT_NAME}-db"'
-  # Ignores non nginx errors since they are related with kong booting up
+  # Ignores non nginx errors since they are related with the API gateway booting up
   kong_logs:
     type: remap
     inputs:
@@ -69,7 +71,7 @@ transforms:
       if err != null {
         abort
       }
-  # Ignores non nginx errors since they are related with kong booting up
+  # Ignores non nginx errors since they are related with the API gateway booting up
   kong_err:
     type: remap
     inputs:

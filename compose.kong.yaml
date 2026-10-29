@@ -1,0 +1,52 @@
+# Optional Kong API gateway override.
+#
+# Envoy is the default gateway in compose.yaml. Use this override only if you
+# need Kong's plugin set or want to roll back to the previous gateway:
+#
+#   docker compose -f compose.yaml -f compose.kong.yaml up -d --remove-orphans
+#
+# The service name stays `api-gw`, so dependents, the `kong` network alias, and
+# the optional Caddy/Nginx configs keep working unchanged.
+
+services:
+  api-gw:
+    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-kong
+    image: kong/kong:3.9.3
+    healthcheck: !override
+      test: ["CMD", "kong", "health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports: !override
+      - ${KONG_HTTP_PORT:-${API_GW_HTTP_PORT:-8000}}:8000/tcp
+      - ${KONG_HTTPS_PORT:-8443}:8443/tcp
+    volumes: !override
+      - ${PROJECT_DIR}/volumes/api/kong.yml:/home/kong/temp.yml:ro,z
+      - ${PROJECT_DIR}/volumes/api/kong-entrypoint.sh:/home/kong/kong-entrypoint.sh:ro,z
+      #- ${PROJECT_DIR}/volumes/api/server.crt:/home/kong/server.crt:ro
+      #- ${PROJECT_DIR}/volumes/api/server.key:/home/kong/server.key:ro
+    environment: !override
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/kong.yml
+      KONG_ROUTER_FLAVOR: expressions
+      # https://github.com/supabase/cli/issues/14
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_DNS_NOT_FOUND_TTL: 1
+      KONG_DNS_VALID_TTL: 5
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth,request-termination,ip-restriction,post-function
+      KONG_NGINX_WORKER_PROCESSES: 2
+      KONG_MEM_CACHE_SIZE: 64m
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+      KONG_PROXY_ACCESS_LOG: /dev/stdout combined
+      #KONG_SSL_CERT: /home/kong/server.crt
+      #KONG_SSL_CERT_KEY: /home/kong/server.key
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
+      ANON_KEY_ASYMMETRIC: ${ANON_KEY_ASYMMETRIC:-}
+      SERVICE_ROLE_KEY_ASYMMETRIC: ${SERVICE_ROLE_KEY_ASYMMETRIC:-}
+      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
+    entrypoint: !override ["/bin/sh", "/home/kong/kong-entrypoint.sh"]

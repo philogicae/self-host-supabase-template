@@ -1,6 +1,6 @@
 # Self-Hosted Supabase Template
 
-A convenient template for self-hosting a complete Supabase environment using Docker Compose. Includes all services needed to run a full-featured Supabase instance: **Postgres 17** (with `pgvector` for AI applications), **Auth** (GoTrue), **Storage** (with RustFS for S3-compatible object storage), **PostgREST**, **Realtime**, **Edge Functions**, **Studio**, and the **Kong** API gateway.
+A convenient template for self-hosting a complete Supabase environment using Docker Compose. Includes all services needed to run a full-featured Supabase instance: **Postgres 17** (with `pgvector` for AI applications), **Auth** (GoTrue), **Storage** (with RustFS for S3-compatible object storage), **PostgREST**, **Realtime**, **Edge Functions**, **Studio**, and the **Envoy** API gateway.
 
 > All credit to [Supabase](https://github.com/supabase/supabase)
 
@@ -11,9 +11,9 @@ A convenient template for self-hosting a complete Supabase environment using Doc
 - **PostgreSQL 17** with `pgvector` extension enabled by default
 - **RustFS** for local, S3-compatible object storage (replaces MinIO)
 - **Asymmetric JWT auth (ES256)** with JWKS support and opaque API keys
-- **Kong** API gateway with expression-based routing
-- **Envoy** as an alternative API gateway (pre-configured, optional)
-- **TLS proxy** support via Caddy or Nginx with automatic Let's Encrypt certificates
+- **Envoy** API gateway (upstream default) with HTTP/2, WebSocket, CORS, per-route auth, and opaque API-key translation
+- **Kong** available as an optional fallback via `compose.kong.yaml`
+- **Cloudflare Tunnel ready** - no domain or certificate configuration needed; optional Caddy/Nginx templates for self-managed TLS
 - **Multi-instance support** - run multiple Supabase stacks on the same server via `COMPOSE_PROJECT_NAME`
 - **Utility scripts** for secret generation, key rotation, password management, and schema ownership
 - **Comprehensive `.env.example`** with documented settings for OAuth, SAML SSO, MFA, and SMTP
@@ -63,7 +63,7 @@ This generates all required secrets (`JWT_SECRET`, `ANON_KEY`, `SERVICE_ROLE_KEY
 
 This creates the necessary volume directories and starts all services in the background via Docker Compose.
 
-> **Note:** the stack exposes ports `8000`/`8443` (API gateway) and `5432`/`6543` (Supavisor). Stop any local service on those ports first, or change them in your `.env` (`KONG_HTTP_PORT`, `POSTGRES_PORT`, `POOLER_PROXY_PORT_TRANSACTION`). The first `docker compose up` pulls ~10 large images, so startup can take a few minutes - watch progress with `docker compose ps` and `docker compose logs -f`.
+> **Note:** the stack exposes port `8000` (API gateway) and `5432`/`6543` (Supavisor). Stop any local service on those ports first, or change them in your `.env` (`API_GW_HTTP_PORT`, `POSTGRES_PORT`, `POOLER_PROXY_PORT_TRANSACTION`). The first `docker compose up` pulls ~10 large images, so startup can take a few minutes - watch progress with `docker compose ps` and `docker compose logs -f`.
 
 5. **Access Supabase Studio:**
 
@@ -83,14 +83,48 @@ COMPOSE_PROJECT_NAME=my-project-supabase
 
 All container, volume, and network names are prefixed with this value, preventing conflicts between instances.
 
-## TLS Proxy (HTTPS)
+## API Gateway
 
-Optional Caddy and Nginx reverse proxy configurations with automatic Let's Encrypt certificates are included in `volumes/proxy/`. These are configuration templates - you'll need to wire them into your Docker Compose setup or run them standalone:
+The stack uses **Envoy** by default. It is the upstream-supported gateway, has a lower memory footprint than Kong, and keeps the same routing and auth behavior: API keys, opaque `sb_` key translation, CORS, Studio basic auth, OAuth/OIDC discovery, and WebSocket upgrades.
 
-- **Caddy**: `volumes/proxy/caddy/Caddyfile` - automatic HTTPS with no extra setup
-- **Nginx**: `volumes/proxy/nginx/supabase-nginx.conf.tpl` - uses Certbot for Let's Encrypt
+Kong remains available as an optional fallback:
 
-Set `PROXY_DOMAIN` (and `CERTBOT_EMAIL` for Nginx) in your `.env` file. See the [HTTPS proxy guide](https://supabase.com/docs/guides/self-hosting/self-hosted-proxy-https).
+```bash
+docker compose -f compose.yaml -f compose.kong.yaml up -d --remove-orphans
+```
+
+When switching an existing deployment from the previous Kong-based compose, run `docker compose up -d --remove-orphans` once so the old gateway container is removed.
+
+Port backward compatibility: the gateway still listens on host port `8000` by default. If an existing `.env` sets `KONG_HTTP_PORT`, that value keeps precedence; new installations can use `API_GW_HTTP_PORT`. Envoy publishes plain HTTP on `8000`; the old Kong HTTPS port `8443` is no longer published by default.
+
+## Public Access (Cloudflare Tunnel)
+
+Cloudflare Tunnel is the recommended way to expose the stack: Cloudflare handles DNS, TLS certificates, and HTTP/3 at the edge, so no `PROXY_DOMAIN` or `CERTBOT_EMAIL` is required.
+
+Point the tunnel's public hostname at:
+
+- `http://localhost:8000` if `cloudflared` runs on the host, or
+- `http://api-gw:8000` if `cloudflared` runs as a container on the Supabase network.
+
+If your tunnel currently targets Kong's HTTPS port `8443`, change the origin to `http://localhost:8000`: the default stack no longer publishes `8443`. If your tunnel runs as a container on the Supabase network, `http://kong:8000` and `http://api-gw:8000` both resolve to the new gateway.
+
+Studio keeps its basic-auth login, and all API routes are reached through the same gateway on port `8000`.
+
+Set `SUPABASE_PUBLIC_URL` (and `API_EXTERNAL_URL`) in `.env` to the public Cloudflare hostname, for example:
+
+```env
+SUPABASE_PUBLIC_URL=https://supabase.example.com
+API_EXTERNAL_URL=https://supabase.example.com/auth/v1
+```
+
+### Optional self-managed TLS
+
+If you do not use Cloudflare Tunnel, the Caddy and Nginx templates in `volumes/proxy/` can terminate TLS themselves:
+
+- **Caddy**: `volumes/proxy/caddy/Caddyfile` - automatic HTTPS
+- **Nginx**: `volumes/proxy/nginx/supabase-nginx.conf.tpl` - Certbot/Let's Encrypt
+
+These templates are not part of `compose.yaml`; wire them in or run them standalone. Only then set `PROXY_DOMAIN` (and `CERTBOT_EMAIL` for Nginx) in `.env`. See the [HTTPS proxy guide](https://supabase.com/docs/guides/self-hosting/self-hosted-proxy-https).
 
 ## Utility Scripts
 
@@ -110,20 +144,21 @@ All scripts are in the `utils/` directory:
 .
 ├── .env.example          # Example environment file - copy to .env and fill in
 ├── compose.yaml          # Docker Compose file defining all Supabase services
+├── compose.kong.yaml     # Optional Kong gateway override (Envoy is default)
 ├── deploy.sh             # Deploy script (creates volumes + starts services)
 ├── reset.sh              # Reset script (stops containers, removes volumes, resets git state)
 ├── prepare_volumes.sh    # Creates volume directories (called by deploy.sh)
 ├── utils/                # Utility scripts for secret generation, key rotation, etc.
 └── volumes/              # Initialization scripts and configuration files
-    ├── api/              # Kong and Envoy API gateway configurations
-    │   ├── envoy/        # Envoy proxy configs (cds.yaml, lds.template.yaml, envoy.yaml)
-    │   ├── kong.yml      # Kong routing configuration
+    ├── api/              # API gateway configurations
+    │   ├── envoy/        # Envoy configs (cds.yaml, lds.template.yaml, envoy.yaml)
+    │   ├── kong.yml      # Kong routing configuration (fallback only)
     │   └── kong-entrypoint.sh
     ├── db/               # Database init scripts (roles, JWT, webhooks, custom SQL)
     ├── functions/        # Edge function examples (hello, main) + deno.jsonc import map
     ├── logs/             # Vector log shipping configuration
     ├── pooler/           # Supavisor pooler configuration
-    ├── proxy/            # TLS proxy configurations
+    ├── proxy/            # Optional self-managed TLS proxy templates
     │   ├── caddy/        # Caddyfile for automatic HTTPS
     │   └── nginx/        # Nginx config template for Let's Encrypt
     ├── snippets/         # Custom SQL snippets (empty by default)

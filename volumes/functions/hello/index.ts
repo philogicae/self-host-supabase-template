@@ -32,5 +32,5 @@ export default {
 };
 
 // To invoke:
-// curl 'http://localhost:<KONG_HTTP_PORT>/functions/v1/hello' \
+// curl 'http://localhost:<API_GW_HTTP_PORT>/functions/v1/hello' \
 //   --header 'apiKey: <sb_publishable/sb_secret key>'

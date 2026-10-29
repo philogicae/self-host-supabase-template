@@ -54,7 +54,7 @@ services:
       DEFAULT_PROJECT_NAME: ${STUDIO_DEFAULT_PROJECT}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
 
-      SUPABASE_URL: http://kong:8000
+      SUPABASE_URL: http://api-gw:8000
       SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
       SUPABASE_ANON_KEY: ${ANON_KEY}
       SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
@@ -72,58 +72,46 @@ services:
       - ${PROJECT_DIR}/volumes/snippets:/app/snippets:z
       - ${PROJECT_DIR}/volumes/functions:/app/edge-functions:ro,z
 
-  kong:
-    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-kong
-    image: kong/kong:3.9.3
+  api-gw:
+    container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-api-gw
+    image: envoyproxy/envoy:v1.39.1
     restart: unless-stopped
     <<: [*default-networks]
-    # Expose `api-gw` as a network alias so internal configs that reference the
-    # upstream v0.8.0 gateway hostname resolve to Kong (our active gateway).
+    # Keep `kong` and `envoy` as network aliases so configs and clients that
+    # reference either gateway hostname keep resolving to the active gateway.
     networks:
       self-host-supabase:
         aliases:
           - api-gw
+          - kong
+          - envoy
     healthcheck:
-      test: ["CMD", "kong", "health"]
-      interval: 5s
+      # The Envoy image does not include curl or wget, so use bash's /dev/tcp.
+      test: ["CMD-SHELL", "timeout 1 bash -c '</dev/tcp/127.0.0.1/8000'"]
+      interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 3
     depends_on:
       studio:
         condition: service_healthy
     ports:
       - ${KONG_HTTP_PORT:-${API_GW_HTTP_PORT:-8000}}:8000/tcp
-      - ${KONG_HTTPS_PORT:-8443}:8443/tcp
     volumes:
-      - ${PROJECT_DIR}/volumes/api/kong.yml:/home/kong/temp.yml:ro,z
-      - ${PROJECT_DIR}/volumes/api/kong-entrypoint.sh:/home/kong/kong-entrypoint.sh:ro,z
-      #- ${PROJECT_DIR}/volumes/api/server.crt:/home/kong/server.crt:ro
-      #- ${PROJECT_DIR}/volumes/api/server.key:/home/kong/server.key:ro
+      - ${PROJECT_DIR}/volumes/api/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro,z
+      - ${PROJECT_DIR}/volumes/api/envoy/cds.yaml:/etc/envoy/cds.yaml:ro,z
+      - ${PROJECT_DIR}/volumes/api/envoy/lds.template.yaml:/etc/envoy/lds.template.yaml:ro,z
+      - ${PROJECT_DIR}/volumes/api/envoy/docker-entrypoint.sh:/docker-entrypoint.sh:ro,z
     environment:
-      KONG_DATABASE: "off"
-      KONG_DECLARATIVE_CONFIG: /usr/local/kong/kong.yml
-      KONG_ROUTER_FLAVOR: expressions
-      # https://github.com/supabase/cli/issues/14
-      KONG_DNS_ORDER: LAST,A,CNAME
-      KONG_DNS_NOT_FOUND_TTL: 1
-      KONG_DNS_VALID_TTL: 5
-      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth,request-termination,ip-restriction,post-function
-      KONG_NGINX_WORKER_PROCESSES: 2
-      KONG_MEM_CACHE_SIZE: 64m
-      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
-      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
-      KONG_PROXY_ACCESS_LOG: /dev/stdout combined
-      #KONG_SSL_CERT: /home/kong/server.crt
-      #KONG_SSL_CERT_KEY: /home/kong/server.key
-      SUPABASE_ANON_KEY: ${ANON_KEY}
-      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
       SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
       SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
       ANON_KEY_ASYMMETRIC: ${ANON_KEY_ASYMMETRIC:-}
       SERVICE_ROLE_KEY_ASYMMETRIC: ${SERVICE_ROLE_KEY_ASYMMETRIC:-}
+      SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
       DASHBOARD_USERNAME: ${DASHBOARD_USERNAME}
       DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
-    entrypoint: ["/bin/sh", "/home/kong/kong-entrypoint.sh"]
+    entrypoint: ["/bin/sh", "/docker-entrypoint.sh"]
 
   auth:
     container_name: ${COMPOSE_PROJECT_NAME:-self-host-supabase}-auth
@@ -503,7 +491,7 @@ services:
       - ${PROJECT_DIR}/volumes/functions:/home/deno/functions:z
       - deno-cache:/root/.cache/deno
     depends_on:
-      kong:
+      api-gw:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "timeout 1 bash -c '</dev/tcp/127.0.0.1/9000'"]
@@ -517,7 +505,7 @@ services:
       # For Podman, use: SUPABASE_JWKS: ${JWT_JWKS}
       #SUPABASE_JWKS: ${JWT_JWKS:-{"keys":[]}}
 
-      SUPABASE_URL: http://kong:8000
+      SUPABASE_URL: http://api-gw:8000
       SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
       # Legacy API keys (HS256-signed JWTs)
       SUPABASE_ANON_KEY: ${ANON_KEY}
